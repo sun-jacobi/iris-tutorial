@@ -52,7 +52,7 @@ Lemma inc_spec (l : val) (xs : list Z) :
     inc l
   {{{ RET #(); isList l ((λ x, #(x + 1)) <$> xs)}}}.
 Proof.
-  (**
+(**
     The proof proceeds by structural induction in [xs]. As [l] changes in each
     iteration, we must universally quantify over it to strengthen the induction
     hypothesis.
@@ -65,8 +65,26 @@ Proof.
     wp_pures.
     by iApply "HΦ".
   - (* Induction step: xs = x :: xs' *)
-    (* exercise *)
-Admitted.
+    iIntros (l).
+    iIntros "%Φ".
+    iIntros "(%hd & %l' & %Hl & Hhd & Hl')".
+    rewrite -> Hl.
+    iIntros "HΦ".
+    wp_rec.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_store.
+    wp_apply (IH with "Hl'").
+    iIntros "Hl".
+    iApply "HΦ".
+    iExists hd.
+    iExists l'.
+    iFrame.
+    done.
+Qed.
 
 (**
   The append function recursively descends [l1], updating the links.
@@ -97,8 +115,33 @@ Lemma append_spec (l1 l2 : val) (xs ys : list val) :
 Proof.
   revert ys l1 l2.
   induction xs as [| x xs' IH]; simpl.
-  (* exercise *)
-Admitted.
+  -
+    iIntros "%ys %l1 %l2 %Φ".
+    iIntros "[-> H2] H'".
+    wp_rec.
+    wp_pures.
+    iApply "H'".
+    done.
+  -
+    iIntros "%ys %l1 %l2 %Φ".
+    iIntros "((%hd & %l' & -> & Hhd & Hl') & Hl2)".
+    iIntros "H".
+    wp_rec.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_apply (IH with "[$Hl' $Hl2]").
+    iIntros "%l HA".
+    wp_pures.
+    wp_store.
+    wp_pures.
+    iApply "H".
+    iExists hd, l.
+    iFrame.
+    done.
+Qed.
 
 (**
   We will implement reverse using a helper function called
@@ -130,8 +173,29 @@ Lemma reverse_append_spec (l acc : val) (xs ys : list val) :
 Proof.
   revert l acc ys.
   induction xs as [| x xs' IH]; simpl.
-  (* exercise *)
-Admitted.
+  -
+    iIntros "%l %acc %ys %Φ".
+    iIntros "[-> H2] H".
+    wp_rec.
+    wp_pures.
+    iApply "H".
+    done.
+  -
+    iIntros "%l %acc %ys %Φ".
+    iIntros "((%hd & %l' & -> & Hhd & Hxs') & Hys)".
+    iIntros "HΦ".
+    wp_rec.
+    wp_pures.
+    wp_load.
+    wp_load.
+    wp_store.
+    wp_apply (IH _  _ (x :: ys) with"[Hxs' Hhd Hys]" ).
+    + iFrame. done.
+    + iIntros "%v Hrev".
+      iApply "HΦ".
+      rewrite -app_assoc.
+      iApply "Hrev".
+Qed.
 
 (**
   Now, we use the specification of [reverse_append] to prove the
@@ -142,8 +206,15 @@ Lemma reverse_spec (l : val) (xs : list val) :
     reverse l
   {{{ v, RET v; isList v (rev xs) }}}.
 Proof.
-  (* exercise *)
-Admitted.
+  iIntros "%Φ Hl Hrev".
+  wp_lam.
+  wp_pures.
+  wp_apply (reverse_append_spec _ _ xs [] with "[Hl]").
+  - iFrame.
+    done.
+  - rewrite -> app_nil_r.
+    done.
+Qed.
 
 (**
   The specifications thus far have been rather straightforward. Now we
@@ -200,8 +271,37 @@ Proof.
   revert a l.
   induction xs as [|x xs IHxs].
   all: simpl.
-  (* exercise *)
-Admitted.
+  - iIntros "%a %l %Φ".
+    iIntros "(-> & _ & HIa & _)".
+    iIntros "HΦ".
+    wp_rec.
+    wp_pures.
+    iApply "HΦ".
+    iFrame.
+    done.
+  - iIntros "%a %l %Φ".
+    iIntros "((%hd & %l' & -> & Hhd & Hl') & [HP HPP] & HIa & #H)".
+    iIntros "HΦ".
+    wp_rec.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_load.
+    wp_pures.
+    wp_apply (IHxs with "[Hl' HPP HIa]").
+    { iFrame. done. }
+    {
+      iIntros "%r [H1 H2]".
+      wp_apply ("H" $! _ _ (xs) with "[HP H2]") .
+      { iFrame. }
+      {
+        iIntros "%r0 HI".
+        iApply "HΦ".
+        iFrame.
+        done.
+      }
+    }
+Qed.
 
 (**
   We can now sum over a list simply by folding an addition function over
