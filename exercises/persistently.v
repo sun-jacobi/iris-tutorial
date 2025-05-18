@@ -88,8 +88,11 @@ Qed.
 
 Lemma pers_dup (P : iProp Σ) `{!Persistent P} : P ⊢ P ∗ P.
 Proof.
-  (* exercise *)
-Admitted.
+  iIntros "#HP".
+  iSplitL "HP".
+  - iApply "HP".
+  - iApply "HP".
+Qed.
 
 (**
   Persistent propositions satisfy a lot of nice properties simply by
@@ -151,6 +154,17 @@ Proof.
     done.
 Qed.
 
+Lemma pers_idemp' (P : iProp Σ) : □ □ P ⊣⊢ □ P.
+Proof.
+  iSplit.
+  - iIntros "#HP".
+    iModIntro.
+    iApply "HP".
+  - iIntros "HP".
+    iDestruct "HP" as "#HP".
+    iModIntro. iModIntro. iApply "HP".
+Qed.
+
 (**
   Only propositions that are instances of the [Persistent] typeclass can
   be added to the persistent context. As with the typeclasses for pure,
@@ -164,7 +178,7 @@ Proof.
   - (**
       The [Persistent] typeclass detects that [□ P ∗ □ Q] is persistent.
     *)
-    iIntros "#HPQ".
+    iIntros "HPQ".
     iDestruct "HPQ" as "[#HP #HQ]".
     iModIntro.
     (**
@@ -173,8 +187,9 @@ Proof.
       ["#"].
     *)
     iFrame "#".
-  - (* exercise *)
-Admitted.
+  - iIntros "#[HP HQ]".
+    iFrame "#".
+Qed.
 
 (** Persistency is preserved by quantifications. *)
 
@@ -329,8 +344,21 @@ Lemma counter_spec (inc : val) :
     counter inc
   {{{ v, RET v; ⌜v = #2⌝ }}}.
 Proof.
-  (* exercise *)
-Admitted.
+  iIntros "%Φ #H HΦ".
+  rewrite /counter.
+  wp_alloc l as "Hl".
+  wp_let.
+  wp_apply ("H" with "Hl").
+  iIntros "%v Hl1".
+  wp_seq.
+  wp_apply ("H" with "Hl1").
+  iIntros "%v' Hl2".
+  wp_seq.
+  wp_load.
+  iModIntro.
+  iApply "HΦ".
+  done.
+Qed.
 
 (* ----------------------------------------------------------------- *)
 (** *** Persistent Points-to *)
@@ -471,7 +499,22 @@ Proof.
   rewrite /par_read.
   (** Both threads have the same postcondition, [t_post]. *)
   set t_post := (λ v, (⌜v = #21⌝)%I : iProp Σ).
-  (* exercise *)
-Admitted.
+  wp_alloc l as "[Hl1 Hl2]".
+  wp_let.
+  wp_pures.
+  wp_apply (wp_par t_post t_post with "[Hl1] [Hl2]").
+  1, 2: wp_load; wp_pures ; by iFrame.
+  iIntros (v1 v2) "[%H1 %H2]".
+  iNext.
+  wp_let.
+  wp_pures.
+  rewrite /t_post.
+  rewrite ->H1.
+  rewrite ->H2.
+  wp_pures.
+  iModIntro.
+  iApply "HΦ".
+  done.
+Qed.
 
 End persistently.
