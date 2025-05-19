@@ -133,8 +133,27 @@ Lemma inc_spec a l :
     inc #a #(length l)
   {{{RET #(); a ↦∗ ((λ i : Z, #(i + 1)) <$> l)}}}.
 Proof.
-  (* exercise *)
-Admitted.
+  iIntros "%Φ Ha HΦ".
+  iLöb as "IH" forall (a l).
+  destruct l as [|v l'].
+  - wp_pures.
+    wp_lam.
+    wp_pures.
+    by iApply "HΦ".
+  - wp_rec; wp_pures.
+    rewrite !array_cons.
+    iDestruct "Ha" as "[Ha1 Ha2]".
+    wp_load.
+    wp_pures.
+    wp_store.
+    wp_pures.
+    rewrite Nat2Z.inj_succ Z.sub_1_r Z.pred_succ.
+    wp_apply ("IH" $! _ l' with "[Ha2]"); try done.
+    iIntros "H".
+    iApply "HΦ".
+    iFrame.
+Qed.
+
 
 (* ================================================================= *)
 (** ** Reverse *)
@@ -154,6 +173,8 @@ Definition reverse : val :=
     "last" <- "tmp";;
     "reverse" ("arr" +ₗ #1) ("len" - #2).
 
+
+
 (**
   Notice we are not following structural induction on the list of values
   as we remove elements from both the front and the back. As such, you
@@ -165,7 +186,6 @@ Lemma reverse_spec a l :
     reverse #a #(length l)
   {{{RET #(); a ↦∗ rev l}}}.
 Proof.
-  (* exercise *)
 Admitted.
 
 End proofs.
