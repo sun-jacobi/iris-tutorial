@@ -359,9 +359,20 @@ Proof.
     }
     (** ... and finish the proof of the forked thread. *)
     done.
-  - (* exercise *)
-Admitted.
-
+  -
+    wp_seq.
+    iInv "Hinv" as "(%v & Hl & #Hl')".
+    wp_load.
+    iSplitR "HΦ".
+    {
+      iIntros "!> !>".
+      iExists v.
+      iFrame.
+      done.
+    }
+    iApply "HΦ".
+    iApply "Hl'".
+Qed.
 End proofs.
 
 (* ================================================================= *)
